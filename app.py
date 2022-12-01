@@ -8,6 +8,7 @@ from flask_migrate import Migrate
 # ===========================================================
 from config import Configuration
 from pprint import pprint
+
 # ===========================================================
 
 app = Flask(__name__)
@@ -20,7 +21,6 @@ migrate = Migrate(app, db, render_as_batch=True)
 
 with app.app_context():
     db.create_all()
-
 
 with app.app_context():
     try:
@@ -47,6 +47,7 @@ class User(db.Model):
     # user_order_id = db.Column(db.Integer, db.ForeignKey("order.id"))
     # user_offer_id = db.Column(db.Integer, db.ForeignKey("offer.id"))
     order_id = db.relationship("Order")
+
     # offer_id = db.relationship("Offer")
 
     def __repr__(self):
@@ -95,17 +96,17 @@ def get_all_users():
     user_list = User.query.all()
     user_res = []
     for user in user_list:
-       user_res.append(
-           {
-               "id": user.id,
-               "first_name": user.first_name,
-               "last_name": user.last_name,
-               "age": user.age,
-               "email": user.email,
-               "role": user.role,
-               "phone": user.phone,
-           }
-       )
+        user_res.append(
+            {
+                "id": user.id,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "age": user.age,
+                "email": user.email,
+                "role": user.role,
+                "phone": user.phone,
+            }
+        )
 
     return json.dumps(user_res)
 
@@ -121,8 +122,9 @@ def get_user_id(sid):
         "age": user.age,
         "email": user.email,
         "role": user.role,
-       "phone": user.phone,
+        "phone": user.phone,
     })
+
 
 # with open("db_json/users.json", encoding='utf-8') as file:
 #     users = json.load(file)
