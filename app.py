@@ -1,16 +1,18 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import json
 from datetime import datetime
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 # ===========================================================
 from config import Configuration
+from pprint import pprint
 # ===========================================================
 
 app = Flask(__name__)
 app.config.from_object(Configuration)
-# app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///database.db"
+# app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
 # app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
@@ -32,6 +34,7 @@ with app.app_context():
 
 class User(db.Model):
     __tablename__ = "user"
+    __table_args__ = {'extend_existing': True}
 
     id = db.Column(db.Integer, primary_key=True, autoincrement="auto")
     first_name = db.Column(db.String(255), nullable=False)
@@ -43,44 +46,110 @@ class User(db.Model):
 
     # user_order_id = db.Column(db.Integer, db.ForeignKey("order.id"))
     # user_offer_id = db.Column(db.Integer, db.ForeignKey("offer.id"))
-    # order_id = db.relationship("Order")
+    order_id = db.relationship("Order")
     # offer_id = db.relationship("Offer")
 
     def __repr__(self):
-        return f"User: {self.id}, {self.first_name}"
+        return f"User: {self.first_name}, {self.last_name}, " \
+               f"{self.age}, {self.email}, {self.role}, {self.role}"
 
 
 class Order(db.Model):
     __tablename__ = "order"
+    __table_args__ = {'extend_existing': True}
 
     id = db.Column(db.Integer, primary_key=True, autoincrement="auto")
-    name = db.Column(db.String(255), unique=True, nullable=False)
+    name = db.Column(db.String(255), nullable=False)
     description = db.Column(db.String(150), nullable=False)
-    start_date = db.Column(db.DateTime, default=datetime.utcnow())
-    end_date = db.Column(db.DateTime)
+    start_date = db.Column(db.Text)
+    end_date = db.Column(db.Text)
     address = db.Column(db.String(255))
     price = db.Column(db.Float)
-    customer_id = db.Column(db.Integer, db.ForeignKey("offer.id"))
-    executor_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    customer_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    executor_id = db.Column(db.Integer)
 
-    offers = db.relationship("Offer")
+    # offers = db.relationship("Offer")
 
     def __repr__(self):
-        return f"Order: {self.id}, {self.name}"
+        return f"Order: {self.name}, {self.description}, {self.start_date}" \
+               f"{self.end_date}, {self.address}, {self.price}" \
+               f"{self.customer_id}, {self.executor_id}"
 
 
 class Offer(db.Model):
     __tablename__ = "offer"
+    __table_args__ = {'extend_existing': True}
 
     id = db.Column(db.Integer, primary_key=True, autoincrement="auto")
     order_id = db.Column(db.Integer)
-    executor_id = db.Column(db.Integer)
+    executor_id = db.Column(db.Integer, db.ForeignKey("user.id"))
 
     # user_offer = db.relationship("User")
 
     def __repr__(self):
         return f"Offer: {self.id}, {self.order_id}, {self.executor_id}"
 
+
+@app.route('/users')
+def get_all_users():
+    user_list = User.query.all()
+    user_res = []
+    for user in user_list:
+       user_res.append(
+           {
+               "id": user.id,
+               "first_name": user.first_name,
+               "last_name": user.last_name,
+               "age": user.age,
+               "email": user.email,
+               "role": user.role,
+               "phone": user.phone,
+           }
+       )
+
+    return json.dumps(user_res)
+
+
+@app.route('/users/<int:sid>')
+def get_user_id(sid):
+    user = User.query.get(sid)
+    # for i
+    return json.dumps({
+        "id": user.id,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "age": user.age,
+        "email": user.email,
+        "role": user.role,
+       "phone": user.phone,
+    })
+
+# with open("db_json/users.json", encoding='utf-8') as file:
+#     users = json.load(file)
+#
+# with open("db_json/orders.json", encoding='utf-8') as file:
+#     orders = json.load(file)
+#
+# with open("db_json/offers.json", encoding='utf-8') as file:
+#     offers = json.load(file)
+#
+# with app.app_context():
+#     # Пересоздаем базу
+#     db.drop_all()
+#     db.create_all()
+#     # создаем экземпляры пользователей
+#     users_1 = [User(**user_data) for user_data in users]
+#     orders_1 = [Order(**order_data) for order_data in orders]
+#     offers_1 = [Offer(**offer_data) for offer_data in offers]
+#     # добавляем в сессию и коммитим
+#     db.session.add_all(users_1)
+#     db.session.add_all(orders_1)
+#     db.session.add_all(offers_1)
+#     db.session.commit()
+#
+#     pprint(db.session.query(User).all())
+#     pprint(db.session.query(Order).all())
+#     pprint(db.session.query(Offer).all())
 
 # user_1 = User(id=1, first_name="User_1", email="foo_1@foo_1.com", )
 # user_2 = User(id=2, first_name="User_2", email="foo_2@foo_2.com", )
