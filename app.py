@@ -5,11 +5,8 @@ from datetime import datetime
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-# ===========================================================
 from config import Configuration
 from pprint import pprint
-
-# ===========================================================
 
 app = Flask(__name__)
 app.config.from_object(Configuration)
@@ -46,7 +43,7 @@ class User(db.Model):
 
     # user_order_id = db.Column(db.Integer, db.ForeignKey("order.id"))
     # user_offer_id = db.Column(db.Integer, db.ForeignKey("offer.id"))
-    order_id = db.relationship("Order")
+    # order_id = db.relationship("Order")
 
     # offer_id = db.relationship("Offer")
 
@@ -67,7 +64,7 @@ class Order(db.Model):
     address = db.Column(db.String(255))
     price = db.Column(db.Float)
     customer_id = db.Column(db.Integer, db.ForeignKey("user.id"))
-    executor_id = db.Column(db.Integer)
+    executor_id = db.Column(db.Integer, db.ForeignKey("user.id"))
 
     # offers = db.relationship("Offer")
 
@@ -82,7 +79,7 @@ class Offer(db.Model):
     __table_args__ = {'extend_existing': True}
 
     id = db.Column(db.Integer, primary_key=True, autoincrement="auto")
-    order_id = db.Column(db.Integer)
+    order_id = db.Column(db.Integer, db.ForeignKey("order.id"))
     executor_id = db.Column(db.Integer, db.ForeignKey("user.id"))
 
     # user_offer = db.relationship("User")
@@ -114,16 +111,88 @@ def get_all_users():
 @app.route('/users/<int:sid>')
 def get_user_id(sid):
     user = User.query.get(sid)
-    # for i
-    return json.dumps({
-        "id": user.id,
-        "first_name": user.first_name,
-        "last_name": user.last_name,
-        "age": user.age,
-        "email": user.email,
-        "role": user.role,
-        "phone": user.phone,
-    })
+
+    return json.dumps(
+        {
+            "id": user.id,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "age": user.age,
+            "email": user.email,
+            "role": user.role,
+            "phone": user.phone,
+        }
+    )
+
+
+@app.route('/orders')
+def get_all_orders():
+    orders_list = Order.query.all()
+    order_res = []
+    for order in orders_list:
+        order_res.append(
+            {
+                "id": order.id,
+                "name": order.name,
+                "description": order.description,
+                "start_date": order.start_date,
+                "end_date": order.end_date,
+                "address": order.address,
+                "price": order.price,
+                "customer_id": order.customer_id,
+                "executor_id": order.executor_id,
+            }
+        )
+
+    return json.dumps(order_res, ensure_ascii=False)
+
+
+@app.route('/orders/<int:sid>')
+def get_order_id(sid):
+    order = Order.query.get(sid)
+
+    return json.dumps(
+        {
+            "id": order.id,
+            "name": order.name,
+            "description": order.description,
+            "start_date": order.start_date,
+            "end_date": order.end_date,
+            "address": order.address,
+            "price": order.price,
+            "customer_id": order.customer_id,
+            "executor_id": order.executor_id,
+        }, ensure_ascii=False
+    )
+
+
+@app.route('/offers')
+def get_all_offers():
+    offer_list = Offer.query.all()
+    offer_res = []
+    for offer in offer_list:
+        offer_res.append(
+            {
+                "id": offer.id,
+                "order_id": offer.order_id,
+                "executor_id": offer.executor_id,
+            }
+        )
+
+    return json.dumps(offer_res)
+
+
+@app.route('/offers/<int:sid>')
+def get_offer_id(sid):
+    offer = Offer.query.get(sid)
+
+    return json.dumps(
+        {
+            "id": offer.id,
+            "order_id": offer.order_id,
+            "executor_id": offer.executor_id,
+        }
+    )
 
 
 # with open("db_json/users.json", encoding='utf-8') as file:
