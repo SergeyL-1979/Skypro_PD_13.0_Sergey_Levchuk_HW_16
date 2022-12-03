@@ -108,8 +108,6 @@ def add_user_profile(user_name, user_surname, user_age, user_email, user_role, u
         phone=user_phone,
     )
     with app.app_context():
-        # db.drop_all()
-        # db.create_all()
         db.session.add(users_new)
         db.session.commit()
 
