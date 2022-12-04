@@ -49,7 +49,7 @@ class User(db.Model):
 
     def __repr__(self):
         return f"User: {self.first_name}, {self.last_name}, " \
-               f"{self.age}, {self.email}, {self.role}, {self.role}"
+               f"{self.age}, {self.email}, {self.role}, {self.phone}"
 
 
 class Order(db.Model):
@@ -69,9 +69,7 @@ class Order(db.Model):
     # offers = db.relationship("Offer")
 
     def __repr__(self):
-        return f"Order: {self.name}, {self.description}, {self.start_date}" \
-               f"{self.end_date}, {self.address}, {self.price}" \
-               f"{self.customer_id}, {self.executor_id}"
+        return f"Order: {self.name}, {self.description}, {self.start_date}, {self.end_date}, {self.address}, {self.price}, {self.customer_id}, {self.executor_id}"
 
 
 class Offer(db.Model):
@@ -200,7 +198,7 @@ def get_user_delete(pk):
     db.session.commit()
     return f"USER DELETE: {user_del}"
 
-
+# =====================================================================
 @app.route('/orders')
 def get_all_orders():
     """
@@ -231,7 +229,12 @@ def get_order_id(sid):
     """
     ЗАПРОС НА ВЫВОД КОНКРЕТНОГО ОРДЕРА ПО ЕГО ID
     """
-    order = Order.query.get(sid)
+    # == Есть решение отображения пользователей, но работает только с одним вхождением ==
+    # res_1 = db.session.query(Order, User).join(Order, User.id == Order.executor_id).first()
+    # res_2 = db.session.query(Order, User).join(Order, User.id == Order.customer_id).first()
+    # return f"{res_2}, {res_1}"
+
+    order = Order.query.filter_by(id=sid).first_or_404()
     return json.dumps(
         {
             "id": order.id,
@@ -246,7 +249,77 @@ def get_order_id(sid):
         }, ensure_ascii=False
     )
 
+# ===== ДОБОВАТЬ НОВЫЙ ОРДЕР =====================================
+def add_new_order(name, description, start_date, end_date, address, price, customer_pk, executor_pk):
 
+    order_add_new = Order(
+        name=name,
+        description=description,
+        start_date=start_date,
+        end_date=end_date,
+        address=address,
+        price=price,
+        customer_id=customer_pk,
+        executor_id=executor_pk,
+    )
+    with app.app_context():
+        db.session.add(order_add_new)
+        db.session.commit()
+    return order_add_new
+
+
+@app.route('/add-order', methods=["POST"])
+def save_order():
+
+    name = request.form.get("name")
+    description = request.form.get("description")
+    start_date = request.form.get("start_date")
+    end_date = request.form.get("end_date")
+    address = request.form.get("address")
+    price = request.form.get("price")
+    customer_pk = request.form.get("customer_pk")
+    executor_pk = request.form.get("executor_pk")
+    add_new_order(
+        name,
+        description,
+        start_date,
+        end_date,
+        address,
+        price,
+        customer_pk,
+        executor_pk,
+    )
+    return f"{name}, {description}, {start_date}, {end_date}, {address}, {price}, {customer_pk}, {executor_pk}"
+# ====================== END ORDERS ==============================
+
+# ====================== EDIT ORDERS =============================
+@app.route('/edit-order/<int:pk>', methods=['PUT'])
+def get_edit_order(pk):
+    edir_order = Order.query.get(pk)
+
+    edir_order.name = request.form.get("name")
+    edir_order.description = request.form.get("description")
+    edir_order.start_date = request.form.get("start_date")
+    edir_order.end_date = request.form.get("end_date")
+    edir_order.address = request.form.get("address")
+    edir_order.price = request.form.get("price")
+    edir_order.customer_id = request.form.get("customer_pk")
+    edir_order.executor_id = request.form.get("executor_pk")
+    db.session.commit()
+
+    return f"User_edit: {edir_order}"
+# ====================== END EDIT ORDERS =========================
+
+# ===================== DEL ORDERS ===============================
+@app.route('/delete-order/<int:pk>', methods=['POST'])
+def get_del_order(pk):
+    order_del = Order.query.get(pk)
+    db.session.delete(order_del)
+    db.session.commit()
+    return f"USER DELETE: {order_del}"
+# ===================== END DELETE ORDERS ========================
+
+# ================== OFFERS ======================================
 @app.route('/offers')
 def get_all_offers():
     """
@@ -272,7 +345,6 @@ def get_offer_id(sid):
     ОФФЕР ПО ID
     """
     offer = Offer.query.get(sid)
-
     return json.dumps(
         {
             "id": offer.id,
@@ -280,6 +352,57 @@ def get_offer_id(sid):
             "executor_id": offer.executor_id,
         }
     )
+
+# ================ ADD NEW OFFERS ==========================================
+def add_new_offer(order_pk, executor_pk):
+
+    offer_add_new = Offer(
+        order_id=order_pk,
+        executor_id=executor_pk,
+    )
+    with app.app_context():
+        db.session.add(offer_add_new)
+        db.session.commit()
+    return offer_add_new
+
+
+@app.route('/add-offer', methods=["POST"])
+def save_offer():
+
+    order_id = request.form.get("order_pk")
+    executor_id = request.form.get("executor_pk")
+    add_new_offer(
+        order_id,
+        executor_id,
+    )
+    return f"{order_id}, {executor_id}"
+# ========== END ADD OFFER ================================================
+
+# ============== EDIT OFFER ===============================================
+@app.route('/edit-offer/<int:pk>', methods=['PUT'])
+def get_edit_offer(pk):
+    edit_offer = Offer.query.get(pk)
+
+    edit_offer.order_id = request.form.get("order_pk")
+    edit_offer.executor_id = request.form.get("executor_pk")
+    db.session.commit()
+
+    return f"User_edit: {edit_offer}"
+# ======================== END EDIT OFFER ==================================
+
+# =================== DELETE OFFER =========================================
+@app.route('/delete-offer/<int:pk>', methods=['POST'])
+def get_del_offer(pk):
+    offer_del = Offer.query.get(pk)
+    db.session.delete(offer_del)
+    db.session.commit()
+    return f"USER DELETE: {offer_del}"
+#  ============================ END DEL OFFER ==============================
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
 
 # ====== ЧТЕНИЯ ДАННЫХ ИЗ JSON И ДОБАВЛЕНИЯ ИХ В БД ========================
 # with open("db_json/users.json", encoding='utf-8') as file:
@@ -318,10 +441,10 @@ def get_offer_id(sid):
 # print(f'Order: {order_1.customer_id.first_name}, User: {user_1.first_name}, Address: {order_1.address}')
 # print(f'Order: {order_2.executor_id.first_name}, Address: {order_2.address}')
 # with app.app_context():
-#     res_1 = db.session.query(User, Order).join(Order, User.id==Order.executor_id).all()
-#     res_2 = db.session.query(User, Order).join(Order, User.id==Order.customer_id).all()
-#     res_3 = db.session.query(Order, Offer).join(Order, Offer.id==Order.executor_id).all()
-#     res_4 = db.session.query(Order, Offer).join(Offer, Order.id==Offer.order_id).all()
+#     res_1 = db.session.query(Order, User).join(Order, User.id==Order.executor_id).first()
+#     res_2 = db.session.query(Order, User).join(Order, User.id==Order.customer_id).first()
+    # res_3 = db.session.query(Order, Offer).join(Order, Offer.id==Order.executor_id).all()
+    # res_4 = db.session.query(Order, Offer).join(Offer, Order.id==Offer.order_id).all()
 # pprint(res_1)
 # pprint(res_2)
 # pprint(res_3)
@@ -368,5 +491,4 @@ def get_offer_id(sid):
 #         db.session.add_all(users_list)
 #         db.session.commit()
 
-if __name__ == '__main__':
-    app.run(debug=True)
+
